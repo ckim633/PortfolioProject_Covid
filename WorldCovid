@@ -1,0 +1,149 @@
+SELECT *
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE continent is not null 
+ORDER BY 3,4
+
+--SELECT *
+--FROM `original-spider-312922.PortfolioProjectCovid.CovidVaccinations`
+--ORDER BY 3,4
+
+--Select data that we are going to be using
+
+SELECT location, date, total_cases, new_cases, total_deaths, population
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE continent is not null 
+ORDER BY 1,2
+
+
+-- Looking at Total Cases VS Total Deaths
+-- Shows chance of dying if you get covid in United States
+
+SELECT location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 AS death_percentage
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE location = 'United States'
+ORDER BY 1,2
+
+
+-- Looking at Total Cases VS Population
+-- Shows percentage of people who got covid
+
+SELECT location, date, population, total_cases, (total_cases/population)*100 AS covid_percentage
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+--WHERE location = 'United States'
+--WHERE continent is not null 
+ORDER BY 1,2
+
+
+-- Looking at Countries with Highest Infection Rate compared to Population
+
+SELECT location, population, MAX(total_cases) AS highest_infection_count, MAX((total_cases/population))*100 AS covid_percentage
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE continent is not null 
+GROUP BY location, population
+ORDER BY covid_percentage DESC 
+
+
+-- Showing Countries with Highest Death Count per Population
+
+SELECT location, MAX(total_deaths) AS total_deaht_count
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE continent is not null 
+GROUP BY location, population
+ORDER BY total_deaht_count DESC 
+
+
+-- Showing Continents with Highest Death Count per Population
+
+SELECT continent, MAX(total_deaths) AS total_deaht_count
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE continent is not null 
+GROUP BY continent
+ORDER BY total_deaht_count DESC 
+
+
+-- Global Numbers
+
+SELECT date, SUM(new_cases) AS world_total_cases, SUM(new_deaths) AS world_total_deaths, SUM(new_deaths)/SUM(new_cases)*100 AS world_covid_percentage
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
+WHERE continent is not null 
+GROUP BY date
+ORDER BY 1
+
+
+-- Looking at Total Population VS Vaccinations
+
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+ ,SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths` AS dea
+JOIN  `original-spider-312922.PortfolioProjectCovid.CovidVaccinations` AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent is not null 
+ORDER BY 2, 3
+
+
+--Use CTE
+
+WITH pop_vs_vac 
+AS
+( 
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+ ,SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths` AS dea
+JOIN  `original-spider-312922.PortfolioProjectCovid.CovidVaccinations` AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent is not null 
+ORDER BY 2, 3
+)
+SELECT *, (rolling_people_vaccinated/population)*100 AS vaccinated_percentage
+FROM pop_vs_vac
+
+
+-- Temp Table
+
+CREATE TABLE vaccinated_population_percentage 
+(
+    continent string,
+    location string,
+    date datetime,
+    population int,
+    new_vaccinations int
+)
+
+--INSERT INTO vaccinated_population_percentage    
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+ ,SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths` AS dea
+JOIN  `original-spider-312922.PortfolioProjectCovid.CovidVaccinations` AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent is not null 
+ORDER BY 2, 3
+
+
+CREATE TEMP TABLE vaccinated_population_percentage AS
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+ ,SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths` AS dea
+JOIN  `original-spider-312922.PortfolioProjectCovid.CovidVaccinations` AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent is not null 
+ORDER BY 2, 3;
+
+SELECT *, (rolling_people_vaccinated/population)*100 AS vaccinated_percentage
+FROM vaccinated_population_percentage;
+
+
+-- Creatving View to store date for later visualizations
+
+CREATE VIEW 'vaccinated_population_percentage' AS
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+ ,SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS rolling_people_vaccinated
+FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths` AS dea
+JOIN  `original-spider-312922.PortfolioProjectCovid.CovidVaccinations` AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+WHERE dea.continent is not null 
+ORDER BY 2, 3
