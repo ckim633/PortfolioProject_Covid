@@ -1,3 +1,5 @@
+--DATA EXPLORATION PORTFOLIO
+
 SELECT *
 FROM `original-spider-312922.PortfolioProjectCovid.CovidDeaths`
 WHERE continent is not null 
